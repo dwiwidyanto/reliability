@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  reliability-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reliability-service
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - DATABASE_PATH=/app/data/reliability.db
+    volumes:
+      - reliability_data:/app/data
+
+volumes:
+  reliability_data:
+    driver: local
