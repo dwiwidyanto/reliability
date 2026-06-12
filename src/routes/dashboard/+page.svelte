@@ -107,7 +107,10 @@
 			</div>
 
 			<!-- Action buttons -->
-			<div class="flex items-center gap-3">
+			<div class="flex flex-wrap items-center gap-3">
+				<a href="/dashboard/analytics" class="py-2 px-4 rounded border border-hud-rose text-hud-rose hover:bg-hud-rose/10 font-bold text-xs tracking-wider uppercase transition-colors">
+					Safety Compliance Center
+				</a>
 				<a href="/fmea" class="py-2 px-4 rounded bg-hud-cyan hover:bg-hud-cyan-dim text-bg-darker font-bold text-xs tracking-wider uppercase transition-colors">
 					+ New FMEA
 				</a>
@@ -141,13 +144,15 @@
 							<tr class="border-b border-border-subtle bg-bg-darker text-gray-300">
 								<th class="p-4">Project Name</th>
 								<th class="p-4">Analysis Type</th>
+								<th class="p-4">Compliance Status</th>
 								<th class="p-4">Last Updated</th>
-								<th class="p-4">Date Created</th>
 								<th class="p-4 text-right">Actions</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-border-subtle text-gray-400">
 							{#each analysesList as item}
+								{@const isApproved = item.status === 'approved'}
+								{@const isOverdue = isApproved && item.nextReviewDueAt && (new Date(item.nextReviewDueAt) < new Date())}
 								<tr class="hover:bg-white/[0.02] transition-colors">
 									<td class="p-4 font-semibold text-white">
 										<a 
@@ -164,10 +169,39 @@
 											<span class="px-2 py-0.5 rounded border border-hud-amber/30 bg-hud-amber/10 text-hud-amber text-[10px] uppercase font-bold">Ishikawa 6M+1</span>
 										{/if}
 									</td>
+									<td class="p-4">
+										<div class="flex items-center gap-2">
+											{#if isApproved}
+												<span class="px-2 py-0.5 rounded border border-hud-emerald/30 bg-hud-emerald/10 text-hud-emerald text-[9px] font-bold uppercase tracking-wide">
+													Approved
+												</span>
+												{#if isOverdue}
+													<span class="px-2 py-0.5 rounded border border-hud-rose/40 bg-hud-rose/15 text-hud-rose text-[9px] font-bold uppercase tracking-wide animate-pulse" title="Next review date exceeded regulatory intervals.">
+														Review Overdue
+													</span>
+												{:else if item.nextReviewDueAt}
+													<span class="text-[9px] text-gray-500">
+														Due: {new Date(item.nextReviewDueAt).toLocaleDateString()}
+													</span>
+												{/if}
+											{:else}
+												<span class="px-2 py-0.5 rounded border border-hud-amber/30 bg-hud-amber/10 text-hud-amber text-[9px] font-bold uppercase tracking-wide">
+													Draft
+												</span>
+											{/if}
+										</div>
+									</td>
 									<td class="p-4 text-xs">{formatDate(item.updatedAt)}</td>
-									<td class="p-4 text-xs">{formatDate(item.createdAt)}</td>
 									<td class="p-4 text-right">
 										<div class="flex items-center justify-end space-x-3">
+											{#if item.type === 'fmea' && isApproved}
+												<a 
+													href="/fmea/{item.id}/baseline"
+													class="text-hud-rose hover:underline text-[10px] uppercase font-bold"
+												>
+													Revisions
+												</a>
+											{/if}
 											<a 
 												href={item.type === 'fmea' ? `/fmea/${item.id}` : `/fishbone/${item.id}`}
 												class="text-hud-cyan hover:underline text-[10px] uppercase font-bold"

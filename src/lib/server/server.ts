@@ -7,12 +7,14 @@ import { pathToFileURL } from 'url';
 import { lucia } from './auth';
 import apiRoutes from './routes';
 import { runMigrations } from '../../db/migrate';
+import { pruneOldAuditLogs } from './audit';
 
-// Run migrations on startup
+// Run migrations and prune old logs on startup
 try {
 	runMigrations();
+	pruneOldAuditLogs();
 } catch (e) {
-	console.error('Failed to run migrations at startup, proceeding anyway...', e);
+	console.error('Failed to run startup database operations, proceeding anyway...', e);
 }
 
 const fastify = Fastify({

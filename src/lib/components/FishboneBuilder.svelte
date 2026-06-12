@@ -60,6 +60,65 @@
 	let saveStatus = $state(''); // 'success' | 'error' | ''
 	let saveMessage = $state('');
 
+	// Compliance State
+	let status = $state<'draft' | 'approved'>('draft');
+	let signatureName = $state('');
+	let lastReviewedAt = $state<string | null>(null);
+	let nextReviewDueAt = $state<string | null>(null);
+
+	let signModalOpen = $state(false);
+	let printSignName = $state('');
+	let isSigning = $state(false);
+	let isReviewing = $state(false);
+
+	async function handleSign() {
+		if (!printSignName.trim()) return;
+		isSigning = true;
+		try {
+			const res = await fetch(`/api/v1/analyses/${analysisId}/sign`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ signatureName: printSignName.trim() })
+			});
+			const json = await res.json();
+			if (json.success) {
+				status = 'approved';
+				signatureName = printSignName.trim();
+				lastReviewedAt = new Date().toISOString();
+				nextReviewDueAt = json.data.nextReviewDueAt;
+				signModalOpen = false;
+				saveStatus = 'success';
+				saveMessage = 'Safety analysis signed and approved.';
+			} else {
+				alert(json.error || 'Failed to sign.');
+			}
+		} catch (e) {
+			alert('Network error signing analysis.');
+		} finally {
+			isSigning = false;
+		}
+	}
+
+	async function handleReview() {
+		isReviewing = true;
+		try {
+			const res = await fetch(`/api/v1/analyses/${analysisId}/review`, { method: 'POST' });
+			const json = await res.json();
+			if (json.success) {
+				lastReviewedAt = new Date().toISOString();
+				nextReviewDueAt = json.data.nextReviewDueAt;
+				saveStatus = 'success';
+				saveMessage = 'Annual compliance review completed.';
+			} else {
+				alert(json.error || 'Failed to record review.');
+			}
+		} catch (e) {
+			alert('Network error recording review.');
+		} finally {
+			isReviewing = false;
+		}
+	}
+
 	// Selection State for Editor Drawer
 	// Path: category -> causeIndex -> subCauseIndex...
 	// Simplifies selection by tracking selected node ID and type
@@ -88,7 +147,7 @@
 	// SVG Element Ref for PNG export
 	let svgRef = $state<SVGSVGElement | null>(null);
 
-	// Load existing analysis if ID is provided
+	// On mount, load analysis if ID is provided
 	onMount(async () => {
 		if (analysisId) {
 			try {
@@ -99,6 +158,10 @@
 					const parsed = JSON.parse(json.data.data);
 					effect = parsed.effect;
 					categories = parsed.categories;
+					status = json.data.status || 'draft';
+					signatureName = json.data.signatureName || '';
+					lastReviewedAt = json.data.lastReviewedAt;
+					nextReviewDueAt = json.data.nextReviewDueAt;
 				} else {
 					saveStatus = 'error';
 					saveMessage = 'Failed to load project: ' + (json.error || 'not found');
@@ -224,6 +287,8 @@
 			if (json.success) {
 				saveStatus = 'success';
 				saveMessage = 'Project successfully saved to cloud.';
+				status = 'draft'; // Reverts to draft on update/save
+				signatureName = '';
 				if (!analysisId) {
 					window.location.href = `/fishbone/${json.data.id}`;
 				}
@@ -309,8 +374,31 @@
 				bind:value={title} 
 				class="w-full bg-transparent border-b border-border-subtle focus:border-hud-cyan text-xl font-bold text-white py-1 focus:outline-none transition-colors"
 			/>
+			<div class="flex flex-wrap items-center gap-4 mt-2 select-none">
+				{#if status === 'approved'}
+					<span class="px-2 py-0.5 rounded border border-hud-emerald/30 bg-hud-emerald/10 text-hud-emerald text-[9px] font-mono font-bold tracking-wider uppercase">
+						Approved / Signed
+					</span>
+					<span class="text-[10px] font-mono text-gray-400">
+						Signed By: <span class="text-white font-semibold">{signatureName}</span>
+					</span>
+					{#if nextReviewDueAt}
+						{@const isOverdue = new Date(nextReviewDueAt) < new Date()}
+						<span class="text-[10px] font-mono {isOverdue ? 'text-hud-rose font-bold animate-pulse' : 'text-gray-400'}">
+							Review Due: {new Date(nextReviewDueAt).toLocaleDateString()} {isOverdue ? '[OVERDUE]' : ''}
+						</span>
+					{/if}
+				{:else}
+					<span class="px-2 py-0.5 rounded border border-hud-amber/30 bg-hud-amber/10 text-hud-amber text-[9px] font-mono font-bold tracking-wider uppercase">
+						Draft (Unsigned)
+					</span>
+					<span class="text-[10px] font-mono text-gray-500">
+						FAA_STATUS: PENDING_COMPLIANCE_SIGN_OFF
+					</span>
+				{/if}
+			</div>
 		</div>
-		<div class="flex items-center gap-3 w-full md:w-auto">
+		<div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
 			<button 
 				onclick={handleSave} 
 				disabled={isSaving}
@@ -321,6 +409,23 @@
 				{/if}
 				<span>Save cloud</span>
 			</button>
+			{#if analysisId && status === 'draft'}
+				<button 
+					onclick={() => signModalOpen = true}
+					class="py-2 px-4 rounded border border-hud-rose text-hud-rose hover:bg-hud-rose/10 text-xs font-mono font-bold tracking-wider uppercase transition-colors"
+				>
+					Sign & Approve
+				</button>
+			{/if}
+			{#if analysisId && status === 'approved'}
+				<button 
+					onclick={handleReview}
+					disabled={isReviewing}
+					class="py-2 px-4 rounded border border-hud-emerald text-hud-emerald hover:bg-hud-emerald/10 text-xs font-mono font-bold tracking-wider uppercase transition-colors"
+				>
+					Log Review
+				</button>
+			{/if}
 			<button 
 				onclick={exportSVG} 
 				class="py-2 px-4 rounded border border-border-subtle text-gray-300 hover:text-hud-cyan hover:border-hud-cyan/40 text-xs font-mono font-bold tracking-wider uppercase transition-colors"
@@ -691,3 +796,34 @@
 		</div>
 	</div>
 </div>
+
+<!-- Signature Modal -->
+{#if signModalOpen}
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+		<div class="hud-card w-full max-w-sm border-hud-rose animate-scale-up">
+			<div class="border-b border-border-subtle p-4 bg-bg-darker flex items-center justify-between">
+				<h3 class="text-sm font-bold text-white font-mono uppercase text-hud-rose">Sign & Approve Analysis</h3>
+				<button onclick={() => signModalOpen = false} class="text-gray-500 hover:text-white font-bold">✕</button>
+			</div>
+			<div class="p-5 space-y-4">
+				<p class="text-xs text-gray-400 leading-normal">
+					By entering your name below, you electronically sign off on this safety-critical Ishikawa diagram. This creates an approved baseline for audit documentation purposes.
+				</p>
+				<div>
+					<label for="sig-name-fb" class="block text-[10px] font-mono text-gray-500 mb-1">Printed Signature Name</label>
+					<input 
+						id="sig-name-fb"
+						type="text" 
+						bind:value={printSignName} 
+						placeholder="Capt. John Doe / Lead Engineer"
+						class="w-full bg-bg-darker border border-border-subtle focus:border-hud-rose p-2 rounded text-xs text-white focus:outline-none font-mono"
+					/>
+				</div>
+			</div>
+			<div class="border-t border-border-subtle p-3 bg-bg-darker flex gap-2 justify-end">
+				<button onclick={() => signModalOpen = false} class="py-1.5 px-4 rounded border border-border-subtle text-xs text-gray-400 hover:text-white transition-colors">Cancel</button>
+				<button onclick={handleSign} disabled={isSigning} class="py-1.5 px-4 rounded bg-hud-rose hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition-colors disabled:opacity-50">Sign Revision</button>
+			</div>
+		</div>
+	</div>
+{/if}
