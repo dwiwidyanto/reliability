@@ -10,5 +10,5 @@
 </svelte:head>
 
 {#if id}
-	<FishboneBuilder {id} />
+	<FishboneBuilder analysisId={id} />
 {/if}

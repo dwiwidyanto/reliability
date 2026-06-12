@@ -10,5 +10,5 @@
 </svelte:head>
 
 {#if id}
-	<FmeaBuilder {id} />
+	<FmeaBuilder analysisId={id} />
 {/if}

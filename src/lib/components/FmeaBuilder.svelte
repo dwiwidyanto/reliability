@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { userState } from '$lib/user.svelte';
 	import { onMount } from 'svelte';
-	import { randomUUID } from 'node:crypto';
 
 	// Props
 	let { analysisId = null as string | null } = $props();
