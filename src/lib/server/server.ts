@@ -75,7 +75,14 @@ const start = async () => {
 			await fastify.register(middie);
 			const handlerUrl = pathToFileURL(buildPath).href;
 			const { handler } = await import(handlerUrl);
-			fastify.use(handler);
+			fastify.use((req, res, next) => {
+				if (req.url?.startsWith('/api/')) {
+					next();
+					return;
+				}
+
+				handler(req, res, next);
+			});
 			fastify.log.info('SvelteKit middleware registered successfully.');
 		} catch (err) {
 			fastify.log.error(err, 'Failed to load SvelteKit production handler');
