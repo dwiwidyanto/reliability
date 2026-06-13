@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/v1/health').then(r => r.json()).then(j => process.exit(j.success ? 0 : 1)).catch(() => process.exit(1))"
 
 # Start the unified Fastify + SvelteKit server
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/server.cjs"]
