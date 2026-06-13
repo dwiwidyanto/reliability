@@ -29,6 +29,14 @@ const signSchema = z.object({
 	signatureName: z.string().min(1, 'Signature printed name is required')
 });
 
+function getErrorMessage(err: unknown) {
+	if (err instanceof z.ZodError) {
+		return err.issues[0]?.message ?? 'Invalid request payload';
+	}
+
+	return err instanceof Error ? err.message : 'Unexpected server error';
+}
+
 const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 	// 1. Health check
 	fastify.get('/health', async (request, reply) => {
@@ -62,7 +70,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 			return { success: true, data: { user: { id: userId, email } } };
 		} catch (err: any) {
 			reply.code(err instanceof z.ZodError ? 400 : 500);
-			return { success: false, error: err instanceof z.ZodError ? err.errors[0].message : err.message };
+			return { success: false, error: getErrorMessage(err) };
 		}
 	});
 
@@ -90,7 +98,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 			return { success: true, data: { user: { id: user.id, email: user.email } } };
 		} catch (err: any) {
 			reply.code(err instanceof z.ZodError ? 400 : 500);
-			return { success: false, error: err instanceof z.ZodError ? err.errors[0].message : err.message };
+			return { success: false, error: getErrorMessage(err) };
 		}
 	});
 
@@ -182,7 +190,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 		} catch (err: any) {
 			if (err.message === 'Unauthorized') return { success: false, error: 'Unauthorized' };
 			reply.code(err instanceof z.ZodError ? 400 : 500);
-			return { success: false, error: err instanceof z.ZodError ? err.errors[0].message : err.message };
+			return { success: false, error: getErrorMessage(err) };
 		}
 	});
 
@@ -261,7 +269,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 		} catch (err: any) {
 			if (err.message === 'Unauthorized') return { success: false, error: 'Unauthorized' };
 			reply.code(err instanceof z.ZodError ? 400 : 500);
-			return { success: false, error: err instanceof z.ZodError ? err.errors[0].message : err.message };
+			return { success: false, error: getErrorMessage(err) };
 		}
 	});
 
@@ -372,7 +380,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 		} catch (err: any) {
 			if (err.message === 'Unauthorized') return { success: false, error: 'Unauthorized' };
 			reply.code(err instanceof z.ZodError ? 400 : 500);
-			return { success: false, error: err instanceof z.ZodError ? err.errors[0].message : err.message };
+			return { success: false, error: getErrorMessage(err) };
 		}
 	});
 
@@ -506,13 +514,15 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 				.all();
 
 			// Filter by dates if provided
+			userAnalyses = userAnalyses.filter((analysis) => analysis.createdAt !== null);
+
 			if (query.startDate) {
 				const start = new Date(query.startDate);
-				userAnalyses = userAnalyses.filter(a => a.createdAt >= start);
+				userAnalyses = userAnalyses.filter(a => a.createdAt && a.createdAt >= start);
 			}
 			if (query.endDate) {
 				const end = new Date(query.endDate);
-				userAnalyses = userAnalyses.filter(a => a.createdAt <= end);
+				userAnalyses = userAnalyses.filter(a => a.createdAt && a.createdAt <= end);
 			}
 
 			// Compile totals
@@ -532,6 +542,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 			}
 
 			userAnalyses.forEach(a => {
+				if (!a.createdAt) return;
 				const key = a.createdAt.toISOString().substring(0, 7);
 				if (monthlyCounts[key]) {
 					monthlyCounts[key][a.type]++;
@@ -551,6 +562,7 @@ const apiRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 			});
 
 			fmeaAnalyses.forEach(f => {
+				if (!f.createdAt) return;
 				const monthKey = f.createdAt.toISOString().substring(0, 7);
 				if (monthlyRpnSum[monthKey]) {
 					try {

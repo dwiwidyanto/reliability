@@ -355,7 +355,7 @@
 		</div>
 
 		<!-- Date Filter Form -->
-		<form onSubmit={applyFilters} class="hud-card p-4 flex flex-wrap items-end gap-4">
+		<form onsubmit={applyFilters} class="hud-card p-4 flex flex-wrap items-end gap-4">
 			<div class="space-y-1">
 				<label for="start-date" class="block text-[9px] font-mono text-gray-500 uppercase">Analysis Since</label>
 				<input 

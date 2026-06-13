@@ -487,7 +487,7 @@
 							stroke-width={selectedId === 'effect' ? '3' : '1.5'} 
 							class="transition-all duration-150 {selectedId === 'effect' ? 'hud-border-glow-rose shadow-[0_0_15px_rgba(255,51,102,0.2)]' : 'group-hover:stroke-hud-rose/70'}"
 						/>
-						<text x="915" y="275" fill="#ff3366" text-anchor="middle" font-weight="bold" font-family="monospace" font-size="10" tracking="2">EFFECT // HAZARD</text>
+						<text x="915" y="275" fill="#ff3366" text-anchor="middle" font-weight="bold" font-family="monospace" font-size="10" letter-spacing="2">EFFECT // HAZARD</text>
 						<text x="915" y="305" fill="#ffffff" text-anchor="middle" font-size="11" font-weight="500">
 							{effect.length > 20 ? effect.substring(0, 18) + '...' : effect}
 						</text>
