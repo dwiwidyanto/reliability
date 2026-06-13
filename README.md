@@ -92,7 +92,7 @@ You can run the container stack locally or deploy it via Docker Compose using th
 ```bash
 docker-compose up --build -d
 ```
-It binds to port `3000` (or whichever port you specify in your `.env` file via `PORT`) and mounts a persistent SQLite database volume to `/app/data/` inside the container.
+The compose service exposes container port `3000` to the Docker network and mounts a persistent SQLite database volume to `/app/data/` inside the container. In Coolify, do not publish host port `3000`; let Coolify/Traefik route your domain to the service's internal port `3000`.
 
 ### Deploying to Coolify (Oracle Cloud Free Tier)
 1. **New Resource**: Create a new application in your Coolify dashboard.
@@ -103,7 +103,8 @@ It binds to port `3000` (or whichever port you specify in your `.env` file via `
 4. **Volumes**:
    - Add a volume mount for persistent data: `reliability_data:/app/data` to ensure your SQLite database survives container upgrades and restarts.
 5. **Port**:
-   - Configure the destination port to `3000`.
+   - Configure the destination/internal port to `3000`.
+   - Do not add a host port mapping such as `3000:3000`; Coolify's reverse proxy owns the public port.
 6. **Health Check**:
    - Configure the health check path to `/api/v1/health`.
 7. Click **Deploy**. The build will complete in under 3 minutes and run under 50MB of RAM.
